@@ -1,3 +1,5 @@
 /bin/
+/dist/
+/.e2e-store/
 /.e2e/
 *.h

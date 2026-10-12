@@ -28,7 +28,12 @@ DIST := $(BIN_DIR)/$(PLUGIN_ID)-v$(VERSION).$(PLUGIN_EXT)
 DOCKER_IMAGE ?= golang:1.26-bookworm
 DOCKER_PLATFORM ?= linux/amd64
 
-.PHONY: build dist docker-build test vet e2e clean
+GOOS := $(shell go env GOOS)
+GOARCH := $(shell go env GOARCH)
+DIST_DIR := dist
+STORE_ZIP := $(DIST_DIR)/$(PLUGIN_ID)_$(VERSION)_$(GOOS)_$(GOARCH).zip
+
+.PHONY: build dist package registry docker-build test vet e2e e2e-store clean
 
 build: $(PLUGIN)
 
@@ -45,6 +50,20 @@ dist: $(SOURCES)
 	rm -f $(basename $(DIST)).h
 	@echo "built $(DIST)"
 
+# Plugin store asset: <id>_<version>_<goos>_<goarch>.zip with the library at
+# the zip root, plus a sha256sum-style checksums.txt covering every zip.
+package: dist
+	mkdir -p $(DIST_DIR)
+	rm -f $(STORE_ZIP)
+	cd $(BIN_DIR) && python3 -m zipfile -c $(abspath $(STORE_ZIP)) $(notdir $(DIST))
+	cd $(DIST_DIR) && sha256sum *.zip > checksums.txt
+	@echo "built $(STORE_ZIP)"
+	@cat $(DIST_DIR)/checksums.txt
+
+# Self-hosted store index. BASE_URL is where the zips in dist/ will be served.
+registry:
+	python3 scripts/store/gen_registry.py --dist $(DIST_DIR) --version $(VERSION) --base-url "$(BASE_URL)" --out $(DIST_DIR)/registry.json
+
 docker-build:
 	mkdir -p $(BIN_DIR)/$(DOCKER_PLATFORM)
 	docker run --rm --platform $(DOCKER_PLATFORM) -v "$(CURDIR)":/src -w /src $(DOCKER_IMAGE) \
@@ -60,5 +79,8 @@ vet:
 e2e: build
 	./scripts/e2e/run.sh
 
+e2e-store:
+	./scripts/e2e/store.sh
+
 clean:
-	rm -rf $(BIN_DIR)
+	rm -rf $(BIN_DIR) $(DIST_DIR)
