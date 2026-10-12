@@ -14,14 +14,14 @@ import (
 )
 
 const (
-	pluginID      = "codex-timezone"
-	pluginVersion = "0.1.0"
-	targetFormat  = "codex"
+	pluginID     = "codex-timezone"
+	targetFormat = "codex"
 )
 
 // CPA refuses to load plugins with empty metadata fields. Override with
 // -ldflags "-X main.pluginRepository=https://github.com/you/your-fork".
 var (
+	pluginVersion    = "0.1.0"
 	pluginAuthor     = "cpa-codex-timezone"
 	pluginRepository = "https://github.com/router-for-me/CLIProxyAPI"
 )
