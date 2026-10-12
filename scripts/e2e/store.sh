@@ -14,6 +14,12 @@ BASE="http://127.0.0.1:48318/v8/management"
 MGMT="Authorization: Bearer e2e-management-key"
 
 command -v "$CPA_BIN" >/dev/null || { echo "CPA binary not found: set CPA_BIN" >&2; exit 1; }
+for port in 48318 47400; do
+  if curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$port/"; then
+    echo "port $port is already in use; stop the process listening on it first" >&2
+    exit 1
+  fi
+done
 
 rm -rf "$WORK" && mkdir -p "$STORE"
 for v in 0.1.0 0.1.1; do

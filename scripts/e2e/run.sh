@@ -16,6 +16,12 @@ MGMT="Authorization: Bearer e2e-management-key"
 PLUGIN="$(ls "$ROOT"/bin/codex-timezone.* | head -n1)"
 
 command -v "$CPA_BIN" >/dev/null || { echo "CPA binary not found: set CPA_BIN" >&2; exit 1; }
+for port in 48317 47391; do
+  if curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$port/"; then
+    echo "port $port is already in use; stop the process listening on it first" >&2
+    exit 1
+  fi
+done
 
 rm -rf "$WORK" && mkdir -p "$WORK/plugins"
 cp "$ROOT/scripts/e2e/config.yaml" "$WORK/config.yaml"
@@ -37,10 +43,11 @@ fail() { echo "FAIL: $*" >&2; tail -n 30 cpa.log >&2; exit 1; }
 post() { curl -sf "$BASE$1" -H "$CLIENT" -H 'Content-Type: application/json' -d "$2" >/dev/null || fail "POST $1"; }
 last_body() { tail -n1 upstream.jsonl; }
 
-post /v1/responses '{"model":"gpt-5.5","stream":false,"input":[{"type":"message","role":"user","content":[{"type":"input_text","text":"<environment_context>\n  <current_date>2000-01-01</current_date>\n  <timezone>America/Los_Angeles</timezone>\n</environment_context>"}]}]}'
+post /v1/responses '{"model":"gpt-5.5","stream":false,"input":[{"type":"message","role":"user","content":[{"type":"input_text","text":"<environment_context>\n  <current_date>2000-01-01</current_date>\n  <timezone>America/Los_Angeles</timezone>\n</environment_context>"},{"type":"input_text","text":"Fix this XML: <timezone>UTC</timezone>"}]}]}'
 last_body | grep -q '<timezone>Asia/Shanghai</timezone>' || fail "Codex environment_context timezone not rewritten"
 last_body | grep -q '2000-01-01' && fail "current_date not rewritten"
-echo "ok   Codex <environment_context> rewritten"
+last_body | grep -q 'Fix this XML: <timezone>UTC</timezone>' || fail "tag outside environment_context was modified"
+echo "ok   Codex <environment_context> rewritten, user text untouched"
 
 post /v1/chat/completions '{"model":"gpt-5.5","messages":[{"role":"user","content":"what time is it?"}]}'
 last_body | grep -q '"role": "developer"' || fail "developer note not injected for chat completions"
