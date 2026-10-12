@@ -56,6 +56,12 @@ func TestRegisterDeclaresCapabilities(t *testing.T) {
 	if caps["request_normalizer"] != true || caps["management_api"] != true {
 		t.Errorf("capabilities = %v", caps)
 	}
+	meta := reg["metadata"].(map[string]any)
+	for _, field := range []string{"Name", "Version", "Author", "GitHubRepository"} {
+		if s, _ := meta[field].(string); strings.TrimSpace(s) == "" {
+			t.Errorf("metadata.%s must be non-empty or CPA rejects the plugin", field)
+		}
+	}
 }
 
 func TestRegisterRejectsInvalidTimezone(t *testing.T) {

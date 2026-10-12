@@ -1,0 +1,39 @@
+config-version: 8
+
+server:
+  host: "127.0.0.1"
+  port: 48317
+
+management:
+  allow-remote: false
+  secret-key: "e2e-management-key"
+  disable-control-panel: true
+
+access:
+  api-keys:
+    - "e2e-client-key"
+
+api-keys:
+  codex:
+    - name: mock-codex
+      base-url: "http://127.0.0.1:47391"
+      models:
+        - name: "gpt-5.5"
+          alias: "gpt-5.5"
+        - name: "o3-mock"
+          alias: "o3-mock"
+      keys:
+        - api-key: "sk-mock"
+
+plugins:
+  enabled: true
+  dir: "plugins"
+  configs:
+    codex-timezone:
+      enabled: true
+      priority: 10
+      timezone: "Asia/Shanghai"
+      models: ["gpt-*"]
+      rewrite_current_date: true
+      inject: "if_missing"
+      inject_template: "Current timezone: {tz}. Current local time: {now}."

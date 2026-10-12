@@ -19,6 +19,13 @@ const (
 	targetFormat  = "codex"
 )
 
+// CPA refuses to load plugins with empty metadata fields. Override with
+// -ldflags "-X main.pluginRepository=https://github.com/you/your-fork".
+var (
+	pluginAuthor     = "cpa-codex-timezone"
+	pluginRepository = "https://github.com/router-for-me/CLIProxyAPI"
+)
+
 var (
 	current atomic.Pointer[config.Settings]
 	stats   counters
@@ -103,9 +110,10 @@ func pluginRegistration() registration {
 	return registration{
 		SchemaVersion: pluginabi.SchemaVersion,
 		Metadata: pluginapi.Metadata{
-			Name:    pluginID,
-			Version: pluginVersion,
-			Author:  "cpa-codex-timezone",
+			Name:             pluginID,
+			Version:          pluginVersion,
+			Author:           pluginAuthor,
+			GitHubRepository: pluginRepository,
 			ConfigFields: []pluginapi.ConfigField{
 				{Name: "timezone", Type: pluginapi.ConfigFieldTypeString, Description: "IANA timezone sent to Codex/GPT models, for example Asia/Shanghai."},
 				{Name: "models", Type: pluginapi.ConfigFieldTypeArray, Description: "Model patterns to rewrite; '*' is a wildcard. Default: [\"gpt-*\"]."},
