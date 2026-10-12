@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	// Hosts without system zoneinfo (notably Windows) still resolve IANA names.
+	_ "time/tzdata"
 
 	"gopkg.in/yaml.v3"
 )
