@@ -80,7 +80,8 @@ http://<CPA 地址>:<端口>/v0/resource/plugins/codex-timezone/ui
 
 输入 management key 后可以：
 
-- 搜索并选择 IANA 时区，实时查看该时区的当前时间；
+- 按地区（常用、亚洲、欧洲、美洲、大洋洲、中东 / 非洲、UTC）从 80 多个预设时区中选择，每个预设显示中文城市名和当前 UTC 偏移（会跟随夏令时变化）；
+- 也可以在输入框里搜索任意 IANA 时区，支持输入中文城市名（如“东京”“纽约”）后自动转换为 IANA 名称，并实时查看该时区的当前时间；
 - 编辑模型匹配规则、注入模式和模板；
 - 粘贴一个请求体，预览改写前后的差异（不会发出真实请求）；
 - 点击“保存并生效”。界面调用 CPA 的 `PATCH /v8/management/config/plugins/configs/codex-timezone` 写入 `config.yaml`，CPA 热重载后无需重启即可生效；
