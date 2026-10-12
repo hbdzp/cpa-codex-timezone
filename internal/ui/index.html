@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codex 时区设置 · CPA 插件</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #fff; --text: #0f172a; --muted: #64748b; --border: #e2e8f0;
+    --primary: #2563eb; --primary-fg: #fff; --ok: #059669; --warn: #d97706; --err: #dc2626;
+    --chip: #eef2ff; --code: #f8fafc; --add: #dcfce7; --del: #fee2e2; --radius: 12px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b1020; --card: #121829; --text: #e2e8f0; --muted: #94a3b8; --border: #243049;
+      --primary: #3b82f6; --chip: #1e293b; --code: #0e1424; --add: #12351f; --del: #3b1518;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 20px 48px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  h1 { font-size: 20px; margin: 0; }
+  .sub { color: var(--muted); margin: 2px 0 0; font-size: 13px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; border: 1px solid var(--border); background: var(--card); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .pill.on .dot { background: var(--ok); } .pill.off .dot { background: var(--warn); } .pill.err .dot { background: var(--err); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+  .card h2 { font-size: 15px; margin: 0 0 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px; }
+  .stack { display: grid; gap: 16px; align-content: start; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  label.field { display: block; margin-bottom: 16px; }
+  .label { font-weight: 600; display: block; margin-bottom: 6px; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  input[type=text], input[type=password], textarea, select {
+    width: 100%; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font: inherit; outline: none; }
+  input:focus, textarea:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent); }
+  input.invalid { border-color: var(--err); }
+  textarea { resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
+  button { font: inherit; cursor: pointer; border-radius: 8px; padding: 8px 14px; border: 1px solid var(--border); background: var(--card); color: var(--text); }
+  button:hover { border-color: var(--primary); }
+  button.primary { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .row > input { flex: 1; min-width: 180px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { background: var(--chip); border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px; font-size: 12px; cursor: pointer; }
+  .chip.tag { cursor: default; display: inline-flex; align-items: center; gap: 6px; font-family: ui-monospace, monospace; }
+  .chip.tag button { border: 0; padding: 0 2px; background: none; color: var(--muted); line-height: 1; }
+  .clock { margin-top: 10px; padding: 12px 14px; border-radius: 10px; background: var(--code); border: 1px dashed var(--border); display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .clock b { font-size: 22px; font-variant-numeric: tabular-nums; }
+  .switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  .switch input { width: 40px; height: 22px; appearance: none; background: var(--border); border-radius: 999px; position: relative; cursor: pointer; transition: .15s; flex: none; }
+  .switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: .15s; }
+  .switch input:checked { background: var(--primary); } .switch input:checked::after { left: 21px; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; flex-wrap: wrap; }
+  .seg button { border: 0; border-radius: 0; border-right: 1px solid var(--border); }
+  .seg button:last-child { border-right: 0; }
+  .seg button.active { background: var(--primary); color: var(--primary-fg); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 10px; }
+  .stat { background: var(--code); border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+  .stat span { color: var(--muted); font-size: 12px; } .stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+  dl.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 14px 0 0; font-size: 13px; }
+  dl.kv dt { color: var(--muted); } dl.kv dd { margin: 0; word-break: break-all; }
+  .diff { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  @media (max-width: 700px) { .diff { grid-template-columns: 1fr; } }
+  .diff pre { margin: 0; background: var(--code); border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-size: 12px; overflow: auto; max-height: 360px; white-space: pre-wrap; word-break: break-all; }
+  .diff .h { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .ln-add { background: var(--add); display: block; } .ln-del { background: var(--del); display: block; }
+  .banner { padding: 10px 12px; border-radius: 8px; margin-bottom: 14px; font-size: 13px; border: 1px solid var(--border); }
+  .banner.err { border-color: var(--err); color: var(--err); }
+  .banner.info { color: var(--muted); }
+  .muted { color: var(--muted); }
+  .toast { position: fixed; right: 20px; bottom: 20px; max-width: min(420px, calc(100vw - 40px)); padding: 12px 16px; border-radius: 10px; color: #fff; background: #0f172a; box-shadow: 0 10px 30px rgba(0,0,0,.25); opacity: 0; transform: translateY(10px); transition: .2s; pointer-events: none; z-index: 10; }
+  .toast.show { opacity: 1; transform: none; } .toast.ok { background: var(--ok); } .toast.err { background: var(--err); }
+  .skeleton { color: transparent !important; background: linear-gradient(90deg, var(--border), var(--code), var(--border)); background-size: 200% 100%; animation: sk 1.2s infinite; border-radius: 6px; }
+  @keyframes sk { to { background-position: -200% 0; } }
+  .footer-actions { display: flex; gap: 8px; justify-content: flex-end; border-top: 1px solid var(--border); padding-top: 14px; margin-top: 4px; flex-wrap: wrap; }
+  code { font-family: ui-monospace, monospace; font-size: 12px; background: var(--code); padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Codex 时区设置</h1>
+      <p class="sub">CPA 在把请求发往 Codex / GPT 模型前，改写请求中的时区与当前日期。</p>
+    </div>
+    <span id="statePill" class="pill"><span class="dot"></span><span id="stateText">未连接</span></span>
+  </header>
+
+  <section class="card" style="margin-bottom:16px">
+    <h2>管理密钥</h2>
+    <div class="row">
+      <input id="keyInput" type="password" placeholder="输入 CPA 的 management key（remote-management.secret-key）" autocomplete="off">
+      <button id="connectBtn" class="primary">连接</button>
+      <button id="forgetBtn" title="清除浏览器中保存的密钥">清除</button>
+    </div>
+    <p class="hint">密钥只保存在当前浏览器的 localStorage 中，用于调用 CPA 管理接口读取和保存配置。</p>
+  </section>
+
+  <div id="globalError" class="banner err" hidden></div>
+
+  <div class="grid">
+    <section class="card" id="settingsCard">
+      <h2>改写设置 <span id="dirtyMark" class="muted" style="font-weight:400;font-size:12px" hidden>有未保存的修改</span></h2>
+
+      <div class="switch">
+        <div><span class="label" style="margin:0">启用插件</span><span class="hint" style="margin:0">关闭后所有请求原样转发。</span></div>
+        <input id="enabled" type="checkbox">
+      </div>
+
+      <label class="field">
+        <span class="label">目标时区（IANA）</span>
+        <input id="timezone" type="text" list="tzList" placeholder="例如 Asia/Shanghai" autocomplete="off" spellcheck="false">
+        <datalist id="tzList"></datalist>
+        <div class="chips" id="tzQuick"></div>
+        <div class="clock"><span class="muted" id="clockLabel">该时区当前时间</span><b id="clock">--:--:--</b><span class="muted" id="clockDate"></span></div>
+      </label>
+
+      <div class="field" style="margin-bottom:16px">
+        <span class="label">匹配模型</span>
+        <div class="row">
+          <input id="modelInput" type="text" placeholder="输入模型名或通配符，回车添加，例如 gpt-5*" spellcheck="false">
+          <button id="addModelBtn">添加</button>
+        </div>
+        <div class="chips" id="modelChips"></div>
+        <p class="hint">只对目标协议为 <code>codex</code> 且模型命中的请求生效，<code>*</code> 为通配符，不区分大小写。</p>
+      </div>
+
+      <div class="switch">
+        <div><span class="label" style="margin:0">同时改写 &lt;current_date&gt;</span><span class="hint" style="margin:0">按目标时区重新计算今天的日期。</span></div>
+        <input id="rewriteDate" type="checkbox">
+      </div>
+
+      <div class="field" style="margin-bottom:16px">
+        <span class="label">注入时间说明</span>
+        <div class="seg" id="injectSeg">
+          <button data-v="off">关闭</button>
+          <button data-v="if_missing">缺少时注入</button>
+          <button data-v="always">总是注入</button>
+        </div>
+        <p class="hint" id="injectHint"></p>
+      </div>
+
+      <label class="field">
+        <span class="label">注入模板</span>
+        <textarea id="template" rows="2"></textarea>
+        <p class="hint">可用占位符：<code>{tz}</code> <code>{now}</code> <code>{date}</code> <code>{time}</code> <code>{offset}</code> <code>{weekday}</code></p>
+        <p class="hint">渲染效果：<span id="templatePreview"></span></p>
+      </label>
+
+      <div class="footer-actions">
+        <button id="resetBtn">还原</button>
+        <button id="saveBtn" class="primary">保存并生效</button>
+      </div>
+    </section>
+
+    <div class="stack">
+      <section class="card">
+        <h2>运行状态 <button id="refreshBtn" style="padding:4px 10px;font-size:12px">刷新</button></h2>
+        <div class="stats">
+          <div class="stat"><span>经过插件</span><b id="sSeen">-</b></div>
+          <div class="stat"><span>命中模型</span><b id="sMatched">-</b></div>
+          <div class="stat"><span>已改写</span><b id="sRewritten">-</b></div>
+          <div class="stat"><span>已注入</span><b id="sInjected">-</b></div>
+          <div class="stat"><span>出错</span><b id="sErrors">-</b></div>
+        </div>
+        <dl class="kv">
+          <dt>生效时区</dt><dd id="kTz">-</dd>
+          <dt>当地时间</dt><dd id="kNow">-</dd>
+          <dt>最近命中</dt><dd id="kLast">-</dd>
+          <dt>插件版本</dt><dd id="kVer">-</dd>
+        </dl>
+        <p class="hint">计数从 CPA 加载插件起累计，重启后清零。</p>
+      </section>
+
+      <section class="card">
+        <h2>使用提示</h2>
+        <p class="muted" style="margin:0 0 8px">Codex CLI 会在请求中附带：</p>
+        <pre style="margin:0;background:var(--code);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;overflow:auto">&lt;environment_context&gt;
+  &lt;current_date&gt;2026-10-12&lt;/current_date&gt;
+  &lt;timezone&gt;America/Los_Angeles&lt;/timezone&gt;
+&lt;/environment_context&gt;</pre>
+        <p class="muted" style="margin:8px 0 0">插件会把这两项替换成上面设置的时区。普通 OpenAI SDK 请求没有这段内容，可以开启“缺少时注入”，在请求末尾追加一条 developer 消息说明当地时间。</p>
+      </section>
+    </div>
+  </div>
+
+  <section class="card" style="margin-top:16px">
+    <h2>改写预览 <span class="muted" style="font-weight:400;font-size:12px">使用左侧尚未保存的设置试运行，不会发出真实请求</span></h2>
+    <div class="row" style="margin-bottom:10px">
+      <input id="previewModel" type="text" placeholder="模型（留空则读取请求体中的 model）" spellcheck="false">
+      <button id="sampleBtn">填入示例</button>
+      <button id="previewBtn" class="primary">预览改写</button>
+    </div>
+    <textarea id="previewBody" rows="9" spellcheck="false" placeholder="粘贴一个 Codex Responses 请求体（JSON）"></textarea>
+    <div id="previewMsg" class="hint"></div>
+    <div class="diff" id="diff" hidden>
+      <div><div class="h">改写前</div><pre id="before"></pre></div>
+      <div><div class="h">改写后</div><pre id="after"></pre></div>
+    </div>
+  </section>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+(() => {
+  const PLUGIN_ID = "codex-timezone";
+  const CONFIG_URL = "/v8/management/config/plugins/configs/" + PLUGIN_ID;
+  const STATUS_URL = "/v0/management/" + PLUGIN_ID + "/status";
+  const PREVIEW_URL = "/v0/management/" + PLUGIN_ID + "/preview";
+  const KEY_STORE = "cpa-codex-timezone:key";
+  const QUICK = ["Asia/Shanghai", "Asia/Hong_Kong", "Asia/Taipei", "Asia/Tokyo", "Asia/Singapore", "America/Los_Angeles", "America/New_York", "Europe/London", "UTC"];
+  const INJECT_HINT = {
+    off: "不追加任何内容，只替换已有的时区和日期标签。",
+    if_missing: "请求中没有 <timezone> 标签时（例如普通 OpenAI SDK 客户端），在 input 末尾追加一条 developer 消息。",
+    always: "无论是否存在标签，都在 input 末尾追加一条 developer 消息。"
+  };
+  const SAMPLE = {
+    model: "gpt-5.5",
+    instructions: "You are Codex, a coding agent.",
+    input: [
+      { type: "message", role: "user", content: [{ type: "input_text", text: "<environment_context>\n  <cwd>/home/me/project</cwd>\n  <shell>zsh</shell>\n  <current_date>2026-10-12</current_date>\n  <timezone>America/Los_Angeles</timezone>\n</environment_context>" }] },
+      { type: "message", role: "user", content: [{ type: "input_text", text: "现在几点了？" }] }
+    ]
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const state = { key: localStorage.getItem(KEY_STORE) || "", saved: null, form: null, connected: false };
+
+  function defaults() {
+    return { enabled: true, timezone: "Asia/Shanghai", models: ["gpt-*"], rewrite_current_date: true, inject: "if_missing", inject_template: "Current timezone: {tz}. Current local time: {now}." };
+  }
+
+  function validTz(tz) {
+    if (!tz) return false;
+    try { new Intl.DateTimeFormat("en-US", { timeZone: tz }); return true; } catch { return false; }
+  }
+
+  function parts(tz, d = new Date()) {
+    const f = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23", weekday: "long", timeZoneName: "longOffset" });
+    const o = {};
+    for (const p of f.formatToParts(d)) o[p.type] = p.value;
+    const offset = (o.timeZoneName || "GMT").replace("GMT", "") || "+00:00";
+    return { date: `${o.year}-${o.month}-${o.day}`, time: `${o.hour}:${o.minute}:${o.second}`, weekday: o.weekday, offset };
+  }
+
+  function renderTemplate(tpl, tz) {
+    if (!validTz(tz)) return "（时区无效）";
+    const p = parts(tz);
+    return tpl.replaceAll("{tz}", tz).replaceAll("{now}", `${p.date} ${p.time} ${p.offset}`).replaceAll("{date}", p.date)
+      .replaceAll("{time}", p.time).replaceAll("{offset}", p.offset).replaceAll("{weekday}", p.weekday);
+  }
+
+  let toastTimer;
+  function toast(msg, kind = "") {
+    const t = $("toast");
+    t.textContent = msg; t.className = "toast show " + kind;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = "toast " + kind, 3200);
+  }
+
+  function setPill(kind, text) { $("statePill").className = "pill " + kind; $("stateText").textContent = text; }
+  function showError(msg) { const b = $("globalError"); b.hidden = !msg; b.textContent = msg || ""; }
+
+  async function api(method, url, body) {
+    const headers = { "Authorization": "Bearer " + state.key };
+    if (body !== undefined) headers["Content-Type"] = "application/json";
+    let res;
+    try {
+      res = await fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+    } catch (e) {
+      throw new Error("无法连接 CPA：" + e.message);
+    }
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+    if (res.status === 401 || res.status === 403) throw Object.assign(new Error("管理密钥无效，或 CPA 未开启管理接口（remote-management）。"), { status: res.status });
+    if (!res.ok) throw Object.assign(new Error((data && (data.error || data.message)) || `请求失败（HTTP ${res.status}）`), { status: res.status });
+    return data;
+  }
+
+  function readForm() {
+    return {
+      enabled: $("enabled").checked,
+      timezone: $("timezone").value.trim(),
+      models: state.form.models.slice(),
+      rewrite_current_date: $("rewriteDate").checked,
+      inject: state.form.inject,
+      inject_template: $("template").value
+    };
+  }
+
+  function fillForm(cfg) {
+    state.form = { ...defaults(), ...cfg, models: (cfg.models && cfg.models.length ? cfg.models : ["gpt-*"]).slice() };
+    $("enabled").checked = !!state.form.enabled;
+    $("timezone").value = state.form.timezone;
+    $("rewriteDate").checked = state.form.rewrite_current_date !== false;
+    $("template").value = state.form.inject_template;
+    renderModels(); renderInject(); onFormChange();
+  }
+
+  function renderModels() {
+    const box = $("modelChips"); box.innerHTML = "";
+    state.form.models.forEach((m, i) => {
+      const c = document.createElement("span"); c.className = "chip tag"; c.textContent = m;
+      const x = document.createElement("button"); x.textContent = "×"; x.title = "移除";
+      x.onclick = () => { state.form.models.splice(i, 1); renderModels(); onFormChange(); };
+      c.appendChild(x); box.appendChild(c);
+    });
+    if (!state.form.models.length) box.innerHTML = '<span class="muted" style="font-size:12px">未设置时默认匹配 gpt-*</span>';
+  }
+
+  function renderInject() {
+    for (const b of $("injectSeg").querySelectorAll("button")) b.classList.toggle("active", b.dataset.v === state.form.inject);
+    $("injectHint").textContent = INJECT_HINT[state.form.inject] || "";
+    $("template").disabled = state.form.inject === "off";
+  }
+
+  function onFormChange() {
+    const tz = $("timezone").value.trim();
+    const ok = validTz(tz);
+    $("timezone").classList.toggle("invalid", !ok);
+    $("templatePreview").textContent = renderTemplate($("template").value, tz);
+    tick();
+    const dirty = state.saved && JSON.stringify(normalize(readForm())) !== JSON.stringify(normalize(state.saved));
+    $("dirtyMark").hidden = !dirty;
+    $("saveBtn").disabled = !ok || !state.connected;
+  }
+
+  function normalize(c) { return { ...defaults(), ...c, models: (c.models || []).slice() }; }
+
+  function tick() {
+    const tz = $("timezone").value.trim();
+    if (!validTz(tz)) { $("clock").textContent = "--:--:--"; $("clockDate").textContent = "时区名称无效"; return; }
+    const p = parts(tz);
+    $("clock").textContent = p.time;
+    $("clockDate").textContent = `${p.date} ${p.weekday} · UTC${p.offset}`;
+  }
+
+  function renderStatus(st) {
+    const s = st.stats || {};
+    $("sSeen").textContent = s.seen ?? 0; $("sMatched").textContent = s.matched ?? 0;
+    $("sRewritten").textContent = s.rewritten ?? 0; $("sInjected").textContent = s.injected ?? 0; $("sErrors").textContent = s.errors ?? 0;
+    $("kTz").textContent = `${st.settings.timezone}（UTC${st.offset}）`;
+    $("kNow").textContent = st.local_now;
+    $("kLast").textContent = s.last_model ? `${s.last_model} · ${s.last_at}` : "暂无";
+    $("kVer").textContent = `${st.plugin} v${st.version}`;
+    if (st.settings.enabled) setPill("on", `已启用 · ${st.settings.timezone}`); else setPill("off", "已加载，未启用");
+  }
+
+  function setLoading(on) {
+    for (const id of ["sSeen", "sMatched", "sRewritten", "sInjected", "sErrors", "kTz", "kNow", "kLast", "kVer"]) $(id).classList.toggle("skeleton", on);
+  }
+
+  async function refreshStatus() {
+    const st = await api("GET", STATUS_URL);
+    renderStatus(st);
+    return st;
+  }
+
+  async function connect() {
+    state.key = $("keyInput").value.trim();
+    if (!state.key) { showError("请先输入管理密钥。"); return; }
+    localStorage.setItem(KEY_STORE, state.key);
+    $("connectBtn").disabled = true; setLoading(true); showError(""); setPill("", "连接中…");
+    try {
+      const st = await refreshStatus();
+      let persisted = null;
+      try { persisted = await api("GET", CONFIG_URL); } catch (e) { if (e.status !== 404) throw e; }
+      const fromFile = persisted && typeof persisted === "object" ? persisted : {};
+      const cfg = {
+        enabled: fromFile.enabled ?? st.settings.enabled,
+        timezone: fromFile.timezone || st.settings.timezone,
+        models: fromFile.models || st.settings.models,
+        rewrite_current_date: fromFile.rewrite_current_date ?? st.settings.rewrite_current_date,
+        inject: fromFile.inject || st.settings.inject,
+        inject_template: fromFile.inject_template || st.settings.inject_template
+      };
+      state.connected = true; state.saved = cfg; fillForm(cfg);
+      toast("已连接 CPA", "ok");
+    } catch (e) {
+      state.connected = false;
+      setPill("err", e.status === 404 ? "插件未加载" : "连接失败");
+      showError(e.status === 404 ? "CPA 中没有找到 codex-timezone 插件的管理接口，请确认插件已放入 plugins 目录且已启用。" : e.message);
+      onFormChange();
+    } finally {
+      $("connectBtn").disabled = false; setLoading(false);
+    }
+  }
+
+  async function save() {
+    const cfg = readForm();
+    if (!validTz(cfg.timezone)) { toast("时区名称无效", "err"); return; }
+    $("saveBtn").disabled = true; $("saveBtn").textContent = "保存中…";
+    try {
+      await api("PATCH", CONFIG_URL, cfg);
+      state.saved = cfg; onFormChange();
+      let applied = false;
+      for (let i = 0; i < 10 && !applied; i++) {
+        await new Promise(r => setTimeout(r, 500));
+        const st = await refreshStatus().catch(() => null);
+        applied = !!st && st.settings.timezone === cfg.timezone && st.settings.enabled === cfg.enabled && st.settings.inject === cfg.inject;
+      }
+      toast(applied ? `已保存，时区 ${cfg.timezone} 已生效` : "已写入配置文件，等待 CPA 热重载生效", applied ? "ok" : "");
+    } catch (e) {
+      toast("保存失败：" + e.message, "err");
+    } finally {
+      $("saveBtn").textContent = "保存并生效"; onFormChange();
+    }
+  }
+
+  function lineDiff(a, b) {
+    const A = a.split("\n"), B = b.split("\n"), setA = new Set(A), setB = new Set(B);
+    const esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+    return [A.map(l => setB.has(l) ? esc(l) : `<span class="ln-del">${esc(l)}</span>`).join("\n"),
+            B.map(l => setA.has(l) ? esc(l) : `<span class="ln-add">${esc(l)}</span>`).join("\n")];
+  }
+
+  function pretty(obj) {
+    // Unescape the newlines inside strings so environment_context blocks stay readable.
+    return JSON.stringify(obj, null, 2).replace(/\\n/g, "\n");
+  }
+
+  async function preview() {
+    const raw = $("previewBody").value.trim();
+    $("diff").hidden = true;
+    if (!raw) { $("previewMsg").textContent = "请先粘贴请求体，或点击“填入示例”。"; return; }
+    let parsed;
+    try { parsed = JSON.parse(raw); } catch (e) { $("previewMsg").textContent = "请求体不是合法的 JSON：" + e.message; return; }
+    if (!state.connected) { $("previewMsg").textContent = "请先连接 CPA。"; return; }
+    $("previewBtn").disabled = true; $("previewMsg").textContent = "预览中…";
+    try {
+      const f = readForm();
+      const out = await api("POST", PREVIEW_URL, { model: $("previewModel").value.trim(), body: raw, settings: f });
+      if (!out.matched) {
+        $("previewMsg").textContent = "模型未命中匹配规则，请求将原样转发。";
+        return;
+      }
+      const r = out.result;
+      const notes = [`替换时区标签 ${r.timezone_replaced} 处`, `替换日期标签 ${r.date_replaced} 处`, r.injected ? "已追加 developer 说明" : "未注入"];
+      $("previewMsg").textContent = (r.changed ? "改写完成：" : "无需改写：") + notes.join("，");
+      const [before, after] = lineDiff(pretty(parsed), pretty(out.body));
+      $("before").innerHTML = before; $("after").innerHTML = after; $("diff").hidden = false;
+    } catch (e) {
+      $("previewMsg").textContent = "预览失败：" + e.message;
+    } finally {
+      $("previewBtn").disabled = false;
+    }
+  }
+
+  function addModel() {
+    const v = $("modelInput").value.trim();
+    if (!v) return;
+    if (!state.form.models.some(m => m.toLowerCase() === v.toLowerCase())) state.form.models.push(v);
+    $("modelInput").value = ""; renderModels(); onFormChange();
+  }
+
+  // Wire up
+  const zones = (Intl.supportedValuesOf ? Intl.supportedValuesOf("timeZone") : QUICK);
+  $("tzList").innerHTML = ["UTC", ...zones.filter(z => z !== "UTC")].map(z => `<option value="${z}">`).join("");
+  for (const z of QUICK) {
+    const c = document.createElement("span"); c.className = "chip"; c.textContent = z;
+    c.onclick = () => { $("timezone").value = z; onFormChange(); };
+    $("tzQuick").appendChild(c);
+  }
+  for (const b of $("injectSeg").querySelectorAll("button")) b.onclick = () => { state.form.inject = b.dataset.v; renderInject(); onFormChange(); };
+  for (const id of ["enabled", "timezone", "rewriteDate", "template"]) $(id).addEventListener("input", onFormChange);
+  $("modelInput").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addModel(); } });
+  $("addModelBtn").onclick = addModel;
+  $("connectBtn").onclick = connect;
+  $("keyInput").addEventListener("keydown", (e) => { if (e.key === "Enter") connect(); });
+  $("forgetBtn").onclick = () => { localStorage.removeItem(KEY_STORE); $("keyInput").value = ""; state.key = ""; state.connected = false; setPill("", "未连接"); onFormChange(); toast("已清除保存的密钥"); };
+  $("resetBtn").onclick = () => { fillForm(state.saved || defaults()); toast("已还原为已保存的设置"); };
+  $("saveBtn").onclick = save;
+  $("refreshBtn").onclick = () => state.connected ? refreshStatus().catch(e => toast(e.message, "err")) : toast("请先连接 CPA", "err");
+  $("sampleBtn").onclick = () => { $("previewBody").value = JSON.stringify(SAMPLE, null, 2); };
+  $("previewBtn").onclick = preview;
+
+  fillForm(defaults());
+  setInterval(tick, 1000);
+  if (state.key) { $("keyInput").value = state.key; connect(); }
+})();
+</script>
+</body>
+</html>
