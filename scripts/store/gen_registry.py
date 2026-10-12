@@ -25,7 +25,9 @@ PLUGIN = {
     "id": "codex-timezone",
     "name": "Codex 时区",
     "description": "在 CPA 把请求发往 Codex / GPT 模型前，改写请求中的时区与当前日期，并提供中文 Web 配置界面。",
-    "author": "cpa-codex-timezone",
+    "author": "hbdzp",
+    "repository": "https://github.com/hbdzp/cpa-codex-timezone",
+    "homepage": "https://github.com/hbdzp/cpa-codex-timezone",
     "tags": ["Codex", "Timezone", "Request Normalizer", "Management"],
 }
 

@@ -97,7 +97,7 @@ Current timezone: Asia/Shanghai. Current local time: 2026-10-13 00:10:34 +08:00.
 
 ```bash
 # 1. 编译插件
-git clone <本仓库地址> cpa-codex-timezone
+git clone https://github.com/hbdzp/cpa-codex-timezone.git
 cd cpa-codex-timezone
 make dist                # 产物：bin/codex-timezone-v0.1.0.so
 
@@ -142,7 +142,7 @@ plugins:
 
 ```bash
 make dist VERSION=0.2.0                                          # 设置版本号
-make dist REPOSITORY=https://github.com/you/cpa-codex-timezone   # 设置插件信息中的仓库地址
+make dist REPOSITORY=https://github.com/you/your-fork            # fork 后改成自己的仓库地址（默认 hbdzp/cpa-codex-timezone）
 make docker-build DOCKER_PLATFORM=linux/arm64                    # 为 arm64 编译（需要 Docker 支持多架构）
 ```
 
@@ -332,7 +332,7 @@ curl -X DELETE http://127.0.0.1:8317/v8/management/plugins/codex-timezone -H "Au
 `make package` 会按这个格式打包当前平台的插件，并生成 `checksums.txt`：
 
 ```bash
-make package VERSION=0.1.0 REPOSITORY=https://github.com/you/cpa-codex-timezone
+make package VERSION=0.1.0
 # dist/codex-timezone_0.1.0_linux_amd64.zip
 # dist/checksums.txt
 ```
@@ -353,9 +353,9 @@ make package VERSION=0.1.0 REPOSITORY=https://github.com/you/cpa-codex-timezone
       "id": "codex-timezone",
       "name": "Codex 时区",
       "description": "在 CPA 把请求发往 Codex / GPT 模型前，改写请求中的时区与当前日期，并提供中文 Web 配置界面。",
-      "author": "你的名字",
-      "repository": "https://github.com/you/cpa-codex-timezone",
-      "homepage": "https://github.com/you/cpa-codex-timezone",
+      "author": "hbdzp",
+      "repository": "https://github.com/hbdzp/cpa-codex-timezone",
+      "homepage": "https://github.com/hbdzp/cpa-codex-timezone",
       "tags": ["Codex", "Timezone"]
     }
   ]
@@ -387,7 +387,8 @@ python3 scripts/store/gen_registry.py --dist dist --version 0.1.0 \
     "id": "codex-timezone",
     "name": "Codex 时区",
     "description": "…",
-    "author": "cpa-codex-timezone",
+    "author": "hbdzp",
+    "repository": "https://github.com/hbdzp/cpa-codex-timezone",
     "version": "0.1.0",
     "install": {
       "type": "direct",

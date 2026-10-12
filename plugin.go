@@ -22,8 +22,8 @@ const (
 // -ldflags "-X main.pluginRepository=https://github.com/you/your-fork".
 var (
 	pluginVersion    = "0.1.0"
-	pluginAuthor     = "cpa-codex-timezone"
-	pluginRepository = "https://github.com/router-for-me/CLIProxyAPI"
+	pluginAuthor     = "hbdzp"
+	pluginRepository = "https://github.com/hbdzp/cpa-codex-timezone"
 )
 
 var (
