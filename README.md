@@ -26,6 +26,7 @@
 - [升级与卸载](#升级与卸载)
 - [常见问题](#常见问题)
 - [开发与测试](#开发与测试)
+- [许可证](#许可证)
 
 ---
 
@@ -77,11 +78,12 @@ Current timezone: Asia/Shanghai. Current local time: 2026-10-13 00:10:34 +08:00.
 | 项目 | 要求 |
 | --- | --- |
 | CPA | v8.x，需要开启 `plugins.enabled` |
-| 编译工具 | Go 1.26 及以上，并且需要 C 编译器（插件使用 cgo 编译为动态库） |
+| 支持的平台 | 预编译包：Linux amd64 / arm64、macOS amd64 / arm64、Windows amd64 |
 | Linux 运行环境 | glibc 2.34 及以上。Debian 12、Ubuntu 22.04+ 和 CPA 官方 Docker 镜像都满足；Alpine（musl）不支持 |
 | Web 界面 | CPA 需要设置 `management.secret-key` |
+| 编译工具（仅自己编译时需要） | Go 1.26 及以上，并且需要 C 编译器（插件使用 cgo 编译为动态库） |
 
-各平台安装 C 编译器的方法：
+自己编译时，各平台安装 C 编译器的方法：
 
 - **Debian / Ubuntu**：`sudo apt install build-essential`
 - **macOS**：`xcode-select --install`
@@ -93,20 +95,57 @@ Current timezone: Asia/Shanghai. Current local time: 2026-10-13 00:10:34 +08:00.
 
 ## 快速开始
 
-以 Linux 上直接运行的 CPA 为例，CPA 工作目录为 `/opt/cliproxyapi`：
+三种安装方式任选一种。
+
+### 方式一：插件商店（推荐，可一键升级）
+
+在 CPA 的 `config.yaml` 中信任本仓库的源：
+
+```yaml
+management:
+  secret-key: "换成你自己的管理密钥"
+
+plugins:
+  enabled: true
+  dir: "plugins"
+  store-sources:
+    - "https://raw.githubusercontent.com/hbdzp/cpa-codex-timezone/main/registry.json"
+```
+
+重启 CPA 后安装（`source-a4229a9ecaa6` 是上面这个源地址对应的固定 ID）：
 
 ```bash
-# 1. 编译插件
+curl -X POST "http://127.0.0.1:8317/v8/management/plugins/store/codex-timezone/install?source=source-a4229a9ecaa6" \
+  -H "Authorization: Bearer <管理密钥>"
+```
+
+CPA 会自动下载当前平台的发布包、校验 SHA256 并热加载。详细说明见[通过插件商店安装](#通过插件商店安装信任第三方源)。
+
+### 方式二：下载预编译包
+
+1. 在 [Releases](https://github.com/hbdzp/cpa-codex-timezone/releases/latest) 下载与 CPA 系统和架构对应的 `codex-timezone_<版本>_<系统>_<架构>.zip`，可以用同一页面的 `checksums.txt` 核对 SHA256；
+2. 解压得到 `codex-timezone-v<版本>.so`（macOS 为 `.dylib`，Windows 为 `.dll`），放入 CPA 的插件目录；
+3. 按下面的方式修改 `config.yaml` 并重启 CPA。
+
+```bash
+# 以 Linux amd64、CPA 工作目录 /opt/cliproxyapi 为例
+VERSION=0.1.0
+curl -LO https://github.com/hbdzp/cpa-codex-timezone/releases/download/v$VERSION/codex-timezone_${VERSION}_linux_amd64.zip
+mkdir -p /opt/cliproxyapi/plugins
+unzip -o codex-timezone_${VERSION}_linux_amd64.zip -d /opt/cliproxyapi/plugins/
+```
+
+### 方式三：自己编译
+
+```bash
 git clone https://github.com/hbdzp/cpa-codex-timezone.git
 cd cpa-codex-timezone
 make dist                # 产物：bin/codex-timezone-v0.1.0.so
-
-# 2. 放入 CPA 的插件目录
 mkdir -p /opt/cliproxyapi/plugins
 cp bin/codex-timezone-v0.1.0.so /opt/cliproxyapi/plugins/
 ```
 
-然后编辑 CPA 的 `config.yaml`，加入以下内容（已有 `management`、`plugins` 段的话就合并进去）：
+方式二、三需要编辑 CPA 的 `config.yaml`，加入以下内容（已有 `management`、`plugins` 段的话就合并进去）：
 
 ```yaml
 management:
@@ -226,15 +265,15 @@ plugins:
   enabled: true
   dir: "plugins"
   store-sources:
-    - "https://example.com/cpa-plugins/registry.json"
+    - "https://raw.githubusercontent.com/hbdzp/cpa-codex-timezone/main/registry.json"
 ```
 
-不想手动编辑文件时，也可以调用管理接口。注意 `PUT` 会**覆盖**整个列表，已有的源要一并写上：
+这是本仓库提供的源，安装包来自本仓库的 GitHub Releases。不想手动编辑文件时，也可以调用管理接口。注意 `PUT` 会**覆盖**整个列表，已有的源要一并写上：
 
 ```bash
 curl -X PUT http://127.0.0.1:8317/v8/management/config/plugins/store-sources \
   -H "Authorization: Bearer <管理密钥>" -H "Content-Type: application/json" \
-  -d '["https://example.com/cpa-plugins/registry.json"]'
+  -d '["https://raw.githubusercontent.com/hbdzp/cpa-codex-timezone/main/registry.json"]'
 ```
 
 **源地址是 HTTP（非 HTTPS）时**，例如内网服务器，CPA 默认会拒绝，报错 `insecure plugin store url requires matching allow-insecure auth rule`。需要再加一条匹配该地址前缀的规则，显式允许：
@@ -337,9 +376,20 @@ make package VERSION=0.1.0
 # dist/checksums.txt
 ```
 
-需要支持多个平台时，在每个平台（或对应的 Docker 环境）上分别执行 `make package`，把生成的 zip 都汇总到同一个 `dist/` 目录，然后在该目录下重新执行一次 `sha256sum *.zip > checksums.txt`。
+需要支持多个平台时，在每个平台（或对应的 Docker 环境）上分别执行 `make package`，把生成的 zip 都汇总到同一个 `dist/` 目录，然后执行 `python3 scripts/release/checksums.py dist` 重新生成 `checksums.txt`。
 
 ### 方式一：GitHub Release
+
+**本仓库已经配置好自动发布。** 修改代码后，推送一个版本 tag 即可：
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+GitHub Actions（`.github/workflows/release.yml`）会在 Linux amd64 / arm64（Debian bookworm 容器，与 CPA 官方镜像一致）、macOS amd64 / arm64 和 Windows amd64 上分别编译打包，生成 `checksums.txt`，并创建同名 Release。插件版本号取自 tag，不需要改代码。仓库根目录的 `registry.json` 只登记仓库地址，CPA 会自动读取最新的 Release，所以发版后**不需要修改 registry.json**，已安装的用户在商店列表里就能看到 `update_available: true`。
+
+如果是 fork 后自己发布，或者不用 GitHub Actions，手动发布的要求是：
 
 1. 在 GitHub 仓库创建 Release，**tag 为 `v0.1.0` 或 `0.1.0`**，CPA 会从 tag 中解析出版本号。
 2. 上传附件：所有平台的 `codex-timezone_0.1.0_<系统>_<架构>.zip`，以及 **`checksums.txt`**（必须有，CPA 安装时会用它校验）。
@@ -676,4 +726,13 @@ CPA_BIN=$PWD/CLIProxyAPI/cli-proxy-api make e2e-store
 | `internal/rewrite` | 时区 / 日期改写与注入逻辑 |
 | `internal/ui/index.html` | 内嵌的配置页面（原生 HTML/CSS/JS，无外部依赖） |
 | `scripts/e2e` | 模拟上游、测试配置与端到端测试脚本（含商店测试 `store.sh`） |
-| `scripts/store` | 插件商店源文件生成脚本 `gen_registry.py` |
+| `scripts/store` | 直链（direct）源文件生成脚本 `gen_registry.py` |
+| `scripts/release` | 打包脚本 `package.sh`、校验文件生成脚本 `checksums.py`，本地 `make package` 和 CI 共用 |
+| `registry.json` | 本仓库的插件商店源（GitHub Release 方式） |
+| `.github/workflows` | `ci.yml`：测试与编译；`release.yml`：推送 `v*` tag 时编译全平台并发布 Release |
+
+---
+
+## 许可证
+
+[MIT](LICENSE)
