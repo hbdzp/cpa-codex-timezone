@@ -48,7 +48,10 @@ jobs:
           ref: ${{ env.TAG }}
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          # Latest 1.26 patch: 1.26.0 links Windows DLLs with a .def file newer
+          # MinGW ld rejects (golang/go#78238).
+          go-version: "1.26.x"
+          check-latest: true
       - run: |
           GOARCH=arm64 CC="clang -arch arm64" scripts/release/package.sh "${TAG#v}" "$REPOSITORY"
           GOARCH=amd64 CC="clang -arch x86_64" scripts/release/package.sh "${TAG#v}" "$REPOSITORY"
@@ -68,7 +71,10 @@ jobs:
           ref: ${{ env.TAG }}
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          # Latest 1.26 patch: 1.26.0 links Windows DLLs with a .def file newer
+          # MinGW ld rejects (golang/go#78238).
+          go-version: "1.26.x"
+          check-latest: true
       - run: scripts/release/package.sh "${TAG#v}" "$REPOSITORY"
       - uses: actions/upload-artifact@v4
         with:
