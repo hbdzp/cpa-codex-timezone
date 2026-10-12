@@ -604,6 +604,7 @@ CPA 日志中出现 `plugin hot reloaded ... active_version=0.2.0` 就说明升�
 | 加载时报 `wrong ELF class` / `cannot open shared object` | 系统或 CPU 架构不一致（例如 arm64 服务器用了 amd64 的 .so），需要在目标平台上编译 |
 | 在 Alpine 镜像中加载失败 | Alpine 使用 musl，不支持本插件，请改用基于 Debian 的官方镜像 |
 | Web 界面打不开（404） | 插件未加载，或者 CPA 处于 Home 模式 |
+| Web 界面能打开，但连接时提示“没有找到管理接口” | `management.secret-key` 为空时，CPA 会关闭全部管理接口（返回 404），设置密钥后重启 CPA |
 | Web 界面提示“管理密钥无效” | 密钥不对；`management.secret-key` 为空；或者从远程访问但 `allow-remote` 为 `false` |
 | 保存后一直提示“等待生效” | 配置文件已写入，但 CPA 拒绝了新配置（例如时区名无效），查看 CPA 日志中的 `plugin.reconfigure` 警告 |
 | `matched` 一直为 0 | 模型名不匹配 `models` 规则，例如带了前缀 `team/gpt-5.5`，可以把规则改成 `*gpt-*`；或者请求没有发往 Codex 上游 |

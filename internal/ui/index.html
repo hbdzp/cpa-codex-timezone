@@ -108,7 +108,7 @@
   <section class="card" style="margin-bottom:16px">
     <h2>管理密钥</h2>
     <div class="row">
-      <input id="keyInput" type="password" placeholder="输入 CPA 的 management key（remote-management.secret-key）" autocomplete="off">
+      <input id="keyInput" type="password" placeholder="输入 CPA 的 管理密钥（config.yaml 中的 management.secret-key）" autocomplete="off">
       <button id="connectBtn" class="primary">连接</button>
       <button id="forgetBtn" title="清除浏览器中保存的密钥">清除</button>
     </div>
@@ -437,7 +437,7 @@
     } catch (e) {
       state.connected = false;
       setPill("err", e.status === 404 ? "插件未加载" : "连接失败");
-      showError(e.status === 404 ? "CPA 中没有找到 codex-timezone 插件的管理接口，请确认插件已放入 plugins 目录且已启用。" : e.message);
+      showError(e.status === 404 ? "没有找到 codex-timezone 插件的管理接口：请确认插件已放入 plugins 目录并启用，且 CPA 的 management.secret-key 不为空（为空时 CPA 会关闭全部管理接口）。" : e.message);
       onFormChange();
     } finally {
       $("connectBtn").disabled = false; setLoading(false);
@@ -455,7 +455,7 @@
       for (let i = 0; i < 10 && !applied; i++) {
         await new Promise(r => setTimeout(r, 500));
         const st = await refreshStatus().catch(() => null);
-        applied = !!st && st.settings.timezone === cfg.timezone && st.settings.enabled === cfg.enabled && st.settings.inject === cfg.inject;
+        applied = !!st && sameSettings(st.settings, cfg);
       }
       toast(applied ? `已保存，时区 ${cfg.timezone} 已生效` : "已写入配置文件，等待 CPA 热重载生效", applied ? "ok" : "");
     } catch (e) {
@@ -463,6 +463,15 @@
     } finally {
       $("saveBtn").textContent = "保存并生效"; onFormChange();
     }
+  }
+
+  // The status endpoint reports settings after server-side defaults are applied.
+  function sameSettings(live, cfg) {
+    const models = cfg.models.map(m => m.trim()).filter(Boolean);
+    return live.timezone === cfg.timezone && live.enabled === cfg.enabled && live.inject === cfg.inject
+      && live.rewrite_current_date === cfg.rewrite_current_date
+      && (live.models || []).join("\n") === (models.length ? models : ["gpt-*"]).join("\n")
+      && (!cfg.inject_template.trim() || live.inject_template === cfg.inject_template);
   }
 
   function lineDiff(a, b) {
