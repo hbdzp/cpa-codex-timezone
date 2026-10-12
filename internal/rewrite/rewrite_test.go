@@ -74,17 +74,38 @@ func TestApplyKeepsDateWhenDisabled(t *testing.T) {
 }
 
 func TestApplyHandlesUnavailableAndStringContent(t *testing.T) {
-	body := `{"instructions":"<timezone status=\"unavailable\" />","input":[{"role":"user","content":"<current_date status=\"unavailable\" />"}]}`
+	body := `{"instructions":"<environment_context><timezone status=\"unavailable\" /></environment_context>","input":[{"role":"user","content":"<environment_context><current_date status=\"unavailable\" /></environment_context>"}]}`
 	s := settings(t, config.File{Timezone: "Europe/Berlin"})
 	res, err := Apply([]byte(body), s, fixedNow)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := gjson.GetBytes(res.Body, "instructions").String(); got != "<timezone>Europe/Berlin</timezone>" {
+	if got := gjson.GetBytes(res.Body, "instructions").String(); got != "<environment_context><timezone>Europe/Berlin</timezone></environment_context>" {
 		t.Errorf("instructions = %q", got)
 	}
-	if got := gjson.GetBytes(res.Body, "input.0.content").String(); got != "<current_date>2026-10-13</current_date>" {
+	if got := gjson.GetBytes(res.Body, "input.0.content").String(); got != "<environment_context><current_date>2026-10-13</current_date></environment_context>" {
 		t.Errorf("content = %q", got)
+	}
+}
+
+func TestApplyIgnoresTagsOutsideEnvironmentContext(t *testing.T) {
+	prompt := "Fix this XML: <timezone>UTC</timezone> <current_date>2020-01-01</current_date>"
+	body := `{"input":[{"role":"user","content":[{"type":"input_text","text":"<environment_context>\n<timezone>America/Los_Angeles</timezone>\n</environment_context>\n` +
+		strings.ReplaceAll(prompt, `"`, `\"`) + `"}]}]}`
+	s := settings(t, config.File{Timezone: "Asia/Tokyo"})
+	res, err := Apply([]byte(body), s, fixedNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := gjson.GetBytes(res.Body, "input.0.content.0.text").String()
+	if !strings.HasPrefix(text, "<environment_context>\n<timezone>Asia/Tokyo</timezone>\n</environment_context>") {
+		t.Errorf("environment_context not rewritten: %q", text)
+	}
+	if !strings.HasSuffix(text, prompt) {
+		t.Errorf("user prompt must be untouched: %q", text)
+	}
+	if res.TimezoneReplaced != 1 || res.DateReplaced != 0 {
+		t.Errorf("unexpected counts %+v", res)
 	}
 }
 

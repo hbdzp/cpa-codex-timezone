@@ -51,7 +51,7 @@
 </environment_context>
 ```
 
-- 改写范围是 `instructions` 和 `input[]` 中所有非 assistant 的消息，`<timezone status="unavailable" />` 这种写法也会被替换。
+- 只改写 `<environment_context>` 块内的标签，范围是 `instructions` 和 `input[]` 中所有非 assistant 的消息，`<timezone status="unavailable" />` 这种写法也会被替换。用户在提问或粘贴的代码里写到的同名标签不会被改动。
 - `<current_date>` 按目标时区重新计算，这一项可以关闭。
 
 **2. 为没有环境信息的客户端补充当地时间。** 普通 OpenAI SDK、`/v1/chat/completions` 等请求里没有上面这段内容。默认情况下（`inject: if_missing`），插件会在 `input` 末尾追加一条 developer 消息：

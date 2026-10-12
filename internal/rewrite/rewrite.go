@@ -28,8 +28,11 @@ import (
 )
 
 var (
-	timezoneTag    = regexp.MustCompile(`<timezone(?:\s[^>]*)?(?:/>|>[^<]*</timezone>)`)
-	currentDateTag = regexp.MustCompile(`<current_date(?:\s[^>]*)?(?:/>|>[^<]*</current_date>)`)
+	// Only tags inside an environment_context block are rewritten, so the same
+	// tag names quoted in user prompts or pasted files reach the model intact.
+	envContextBlock = regexp.MustCompile(`(?s)<environment_context(?:\s[^>]*)?>.*?</environment_context>`)
+	timezoneTag     = regexp.MustCompile(`<timezone(?:\s[^>]*)?(?:/>|>[^<]*</timezone>)`)
+	currentDateTag  = regexp.MustCompile(`<current_date(?:\s[^>]*)?(?:/>|>[^<]*</current_date>)`)
 )
 
 // Result reports what Apply changed.
@@ -130,18 +133,22 @@ func shouldInject(mode string, timezoneTags int) bool {
 
 func rewriteString(text string, s config.Settings, local time.Time) (string, int, int) {
 	tzCount, dateCount := 0, 0
-	if strings.Contains(text, "<timezone") {
-		text = timezoneTag.ReplaceAllStringFunc(text, func(string) string {
+	if !strings.Contains(text, "<environment_context") {
+		return text, 0, 0
+	}
+	text = envContextBlock.ReplaceAllStringFunc(text, func(block string) string {
+		block = timezoneTag.ReplaceAllStringFunc(block, func(string) string {
 			tzCount++
 			return "<timezone>" + s.Timezone + "</timezone>"
 		})
-	}
-	if s.RewriteCurrentDate && strings.Contains(text, "<current_date") {
-		text = currentDateTag.ReplaceAllStringFunc(text, func(string) string {
-			dateCount++
-			return "<current_date>" + local.Format("2006-01-02") + "</current_date>"
-		})
-	}
+		if s.RewriteCurrentDate {
+			block = currentDateTag.ReplaceAllStringFunc(block, func(string) string {
+				dateCount++
+				return "<current_date>" + local.Format("2006-01-02") + "</current_date>"
+			})
+		}
+		return block
+	})
 	return text, tzCount, dateCount
 }
 
