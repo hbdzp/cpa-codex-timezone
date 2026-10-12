@@ -314,18 +314,19 @@ curl -s http://127.0.0.1:8317/v8/management/plugins/store -H "Authorization: Bea
 
 ```json
 {
-  "store_id": "source-6fa0c4672b02/codex-timezone",
-  "source_id": "source-6fa0c4672b02",
+  "store_id": "source-a4229a9ecaa6/codex-timezone",
+  "source_id": "source-a4229a9ecaa6",
+  "source_url": "https://raw.githubusercontent.com/hbdzp/cpa-codex-timezone/main/registry.json",
   "id": "codex-timezone",
   "name": "Codex 时区",
-  "version": "0.1.0",
-  "install_type": "direct",
-  "platforms": [{"goos": "linux", "goarch": "amd64"}],
-  "installed": false
+  "author": "hbdzp",
+  "install_type": "github-release",
+  "installed": false,
+  "update_available": false
 }
 ```
 
-`source_id` 由源地址计算得到，同一个地址的 `source_id` 始终不变。然后安装：
+`source_id` 由源地址计算得到，同一个地址的 `source_id` 始终不变，本仓库源的 `source_id` 就是 `source-a4229a9ecaa6`。GitHub Release 方式的源不登记版本号，安装时 CPA 会读取最新的 Release。然后安装：
 
 ```bash
 curl -X POST "http://127.0.0.1:8317/v8/management/plugins/store/codex-timezone/install?source=<source_id>" \
