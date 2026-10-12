@@ -3,3 +3,4 @@
 /.e2e-store/
 /.e2e/
 *.h
+__pycache__/
