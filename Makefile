@@ -52,13 +52,9 @@ dist: $(SOURCES)
 
 # Plugin store asset: <id>_<version>_<goos>_<goarch>.zip with the library at
 # the zip root, plus a sha256sum-style checksums.txt covering every zip.
-package: dist
-	mkdir -p $(DIST_DIR)
-	rm -f $(STORE_ZIP)
-	cd $(BIN_DIR) && python3 -m zipfile -c $(abspath $(STORE_ZIP)) $(notdir $(DIST))
-	cd $(DIST_DIR) && python3 -c 'import hashlib, pathlib; print("".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n" for p in sorted(pathlib.Path(".").glob("*.zip"))), end="")' > checksums.txt
-	@echo "built $(STORE_ZIP)"
-	@cat $(DIST_DIR)/checksums.txt
+package:
+	BIN_DIR=$(BIN_DIR) DIST_DIR=$(DIST_DIR) ./scripts/release/package.sh $(VERSION) $(REPOSITORY)
+	python3 scripts/release/checksums.py $(DIST_DIR)
 
 # Self-hosted store index. BASE_URL is where the zips in dist/ will be served.
 registry:
